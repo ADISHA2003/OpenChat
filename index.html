@@ -198,7 +198,7 @@
 
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script>
-      const socket = io();
+      const socket = io({path: "/api/socket"});
 
       // Prompt user for username
       let username = prompt("Enter your username or join as an anonymous user:");
