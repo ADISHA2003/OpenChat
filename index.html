@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenChat</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet" />
+    <style>
+        /* Reset some default styles */
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+      
+        /* Body styling */
+        body {
+          font-family: "Arial", sans-serif;
+          background: #121212; /* Dark background */
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          color: #e0e0e0; /* Light text for readability */
+        }
+      
+        /* Header styling */
+        .chat-header {
+          position: sticky;
+          top: 0;
+          left: 0;
+          width: 100%;
+          background-color: #1f1f1f; /* Dark header */
+          color: #ffffff;
+          text-align: center;
+          font-size: 1.5em;
+          padding: 15px;
+          z-index: 10;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+      
+        .chat-header i {
+          margin-right: 10px;
+        }
+      
+        /* Messages container */
+        .messages {
+          flex: 1;
+          padding: 15px;
+          overflow-y: auto;
+          background: #1e1e1e; /* Dark message container */
+          margin-top: 60px; /* To leave space for the header */
+        }
+      
+        .messages li {
+          margin-bottom: 10px;
+          padding: 8px;
+          border-radius: 10px;
+          max-width: 80%;
+          word-wrap: break-word;
+        }
+      
+        .messages .sent {
+          background-color: #007bff; /* Sent messages blue */
+          color: white;
+          margin-left: auto;
+          border-radius: 10px 10px 0 10px;
+        }
+      
+        .messages .received {
+          background-color: #333333; /* Received messages dark gray */
+          color: #e0e0e0;
+          border-radius: 10px 10px 10px 0;
+        }
+      
+        .messages .timestamp {
+          font-size: 0.8em;
+          color: #fff; /* Lighter gray for timestamp */
+          margin-top: 5px;
+          text-align: right;
+        }
+      
+        /* Typing indicator */
+        .typing {
+          font-style: italic;
+          color: #bbbbbb; /* Lighter gray for typing text */
+          margin-bottom: 10px;
+          padding-left: 15px;
+        }
+      
+        /* Input and button styling */
+        .chat-input {
+          display: flex;
+          padding: 10px;
+          background-color: #2a2a2a; /* Dark input area */
+          border-top: 1px solid #444444; /* Dark border */
+          align-items: center;
+          justify-content: space-between;
+          padding-left: 15px;
+          padding-right: 15px;
+        }
+      
+        .chat-input input {
+          flex: 1;
+          padding: 10px;
+          border: 1px solid #444444; /* Dark border for input */
+          border-radius: 20px;
+          font-size: 1em;
+          background-color: #333333; /* Dark background for input */
+          color: #e0e0e0; /* Light text in input */
+        }
+      
+        .chat-input button {
+          background-color: #007bff; /* Blue button */
+          color: white;
+          border: none;
+          padding: 10px 15px;
+          border-radius: 50%;
+          cursor: pointer;
+          transition: background-color 0.3s;
+          margin-left: 10px;
+        }
+      
+        .chat-input button:hover {
+          background-color: #0056b3; /* Darker blue on hover */
+        }
+      
+        /* Responsive for smaller screens */
+        @media (max-width: 600px) {
+          body {
+            font-size: 14px;
+          }
+      
+          .chat-header {
+            font-size: 1.2em;
+            padding: 10px;
+          }
+      
+          .chat-input input {
+            font-size: 0.9em;
+          }
+      
+          .chat-input button {
+            padding: 8px;
+          }
+      
+          .messages {
+            margin-top: 50px; /* Adjust for the header */
+          }
+      
+          .typing {
+            font-size: 0.9em;
+            padding-left: 10px;
+          }
+        }
+      
+        /* For very large screens (e.g., large desktop monitors) */
+        @media (min-width: 1200px) {
+          .chat-header {
+            font-size: 2em;
+            padding: 20px;
+          }
+      
+          .chat-input input {
+            font-size: 1.1em;
+          }
+      
+          .chat-input button {
+            padding: 12px;
+          }
+      
+          .messages {
+            margin-top: 80px; /* Adjust for the header */
+          }
+        }
+    </style>      
+  </head>
+  <body>
+    <div class="chat-header">
+      <i class="fas fa-comments"></i> OpenChat
+    </div>
+    <ul id="messages" class="messages"></ul>
+    <p id="typingIndicator" class="typing" style="display: none;"></p>
+    <div class="chat-input">
+      <input
+        id="input"
+        autocomplete="off"
+        placeholder="Type a message..."
+      />
+      <button>
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+
+      // Prompt user for username
+      let username = prompt("Enter your username or join as an anonymous user:");
+      if (username) {
+        socket.emit("set username", username); // Set the username
+      } else {
+        username = "Anonymous";
+        socket.emit("set username", username); // Set default username
+      }
+
+      // Listen for form submission when button is clicked
+      const input = document.getElementById("input");
+      const button = document.querySelector("button");
+
+      // Send message when button is clicked
+      button.addEventListener("click", function() {
+        if (input.value) {
+          // Emit the message to the server
+          socket.emit("chat message", input.value);
+          input.value = "";
+        }
+      });
+
+      // Send message when Enter key is pressed
+      input.addEventListener("keypress", function(e) {
+        if (e.key === "Enter" && input.value) {
+          // Emit the message to the server
+          socket.emit("chat message", input.value);
+          input.value = "";
+        }
+      });
+
+      // Listen for incoming messages
+      socket.on("chat message", function(data) {
+        const item = document.createElement("li");
+        item.classList.add(data.username === username ? "sent" : "received");
+        item.innerHTML = `
+          <div>${data.message}</div>
+          <div class="timestamp">${data.timestamp}</div>
+        `;
+        document.getElementById("messages").appendChild(item);
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+
+      // Listen for typing indicator
+      socket.on("typing", (username) => {
+        const typingIndicator = document.getElementById("typingIndicator");
+        typingIndicator.style.display = "block";
+        typingIndicator.textContent = `${username} is typing...`;
+      });
+
+      // Listen for stop typing
+      socket.on("stop typing", (username) => {
+        const typingIndicator = document.getElementById("typingIndicator");
+        typingIndicator.style.display = "none";
+      });
+
+      // Detect when the user starts typing
+      input.addEventListener("input", () => {
+        socket.emit("typing");
+        clearTimeout(window.typingTimeout);
+        window.typingTimeout = setTimeout(() => {
+          socket.emit("stop typing");
+        }, 500);
+      });
+    </script>
+  </body>
+</html>
